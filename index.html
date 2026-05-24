@@ -16,7 +16,35 @@
 <div id="root"></div>
 <script type="text/babel">
 const {useState,useEffect}=React;
-
+const AGENCIES=[
+  {id:"44",prefix:"44",name:"AV CALAMA",group:"SUP RONDONIA",wallets:[7002]},
+  {id:"102",prefix:"102",name:"PORTO VELHO",group:"SUP RONDONIA",wallets:[5050,7002]},
+  {id:"390",prefix:"390",name:"GUAJARA MIRIM",group:"SUP RONDONIA",wallets:[155,5025,7002]},
+  {id:"951",prefix:"951",name:"JI PARANA",group:"SUP RONDONIA",wallets:[142,145,148,172,7002]},
+  {id:"1178",prefix:"1178",name:"ARIQUEMES",group:"SUP RONDONIA",wallets:[159,161,162,163,5028,7002]},
+  {id:"1401",prefix:"1401",name:"JARU",group:"SUP RONDONIA",wallets:[130,131,156,157,158,159,168,5090,7002]},
+  {id:"2184",prefix:"2184",name:"ALVORADA DO OESTE",group:"SUP RONDONIA",wallets:[144,146,148,7002]},
+  {id:"2265",prefix:"2265",name:"MACHADINHO",group:"SUP RONDONIA",wallets:[119,140,144,153,7002]},
+  {id:"2290",prefix:"2290",name:"PRESIDENTE DUTRA",group:"PRESIDENTE DUTRA",wallets:[7002]},
+  {id:"3181",prefix:"3181",name:"NAÇÕES UNIDAS",group:"SUP RONDONIA",wallets:[142,7002]},
+  {id:"3231",prefix:"3231",name:"NOVA BRASILANDIA",group:"PRESIDENTE DUTRA",wallets:[7002]},
+  {id:"3885",prefix:"3885",name:"AV AMAZONAS",group:"SUP RONDONIA",wallets:[7002]},
+  {id:"3997",prefix:"3997",name:"ALTO PARAISO",group:"SUP RONDONIA",wallets:[140,137,7002]},
+  {id:"4000",prefix:"4000",name:"MINISTRO ANDREAZZA",group:"PRESIDENTE DUTRA",wallets:[7002]},
+  {id:"4001",prefix:"4001",name:"MIRANTE DA SERRA",group:"SUP RONDONIA",wallets:[145,147,148,7002]},
+  {id:"4002",prefix:"4002",name:"MONTE NEGRO",group:"SUP RONDONIA",wallets:[131,7002]},
+  {id:"4004",prefix:"4004",name:"NOVA MAMORE",group:"SUP RONDONIA",wallets:[149,152,153,7002]},
+  {id:"4007",prefix:"4007",name:"URUPA",group:"PRESIDENTE DUTRA",wallets:[129,7002]},
+  {id:"4286",prefix:"4286",name:"AV BRASIL JI PARANA",group:"SUP RONDONIA",wallets:[94,96,97,105,7002]},
+  {id:"7133",prefix:"7133",name:"CANDEIRAS DO JAMARI",group:"SUP RONDONIA",wallets:[44,45,7002]},
+  {id:"8005",prefix:"8005",name:"SUP RONDONIA",group:"SUP RONDONIA",wallets:[7002]},
+  {id:"8291",prefix:"8291",name:"CAMPO NOVO",group:"PRESIDENTE DUTRA",wallets:[7002]},
+  {id:"8293",prefix:"8293",name:"PRESIDENTE MEDICI",group:"PRESIDENTE DUTRA",wallets:[130,154,7002]},
+  {id:"3796",prefix:"3796",name:"GOV JORGE TEIXEIRA",group:"PRESIDENTE DUTRA",wallets:[39,7002]},
+  {id:"3232",prefix:"3232",name:"CACOAL",group:"PRESIDENTE DUTRA",wallets:[7002]},
+  {id:"9155",prefix:"9155",name:"ESC EXCLUSIVO",group:"ESC",wallets:[5,9,11,12,13,15,16,17,18,19,20,46,47]},
+];
+const GROUPS=["SUP RONDONIA","PRESIDENTE DUTRA","ESC"];
 const ATT_TYPES=[
   {id:"normal",label:"Normal",short:"Normal",color:"#60a5fa",blocQual:false,blocVisit:false},
   {id:"qualificado",label:"Qualificado",short:"Qualificado",color:"#a78bfa",blocQual:true,blocVisit:false},
@@ -25,7 +53,7 @@ const ATT_TYPES=[
   {id:"visita",label:"Visita Presencial",short:"Visita",color:"#22c55e",blocQual:false,blocVisit:true},
   {id:"visita_qualificado",label:"Visita + Qualificado",short:"Visita+Qual.",color:"#10b981",blocQual:true,blocVisit:true},
 ];
-
+const SEM_QUAL_META=300,SEM_VISIT_META=28,MONTHLY_VISIT_META=5;
 const pad=n=>String(n).padStart(2,"0");
 const nowT=()=>{const d=new Date();return`${pad(d.getHours())}:${pad(d.getMinutes())}`;};
 const toISO=()=>new Date().toISOString().slice(0,10);
@@ -36,7 +64,6 @@ const TODAY=toISO(),CUR_YM=toYM(TODAY);
 const WEEKDAY=new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});
 const load=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}};
 const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
-
 const C={bg:"#070d1a",panel:"rgba(255,255,255,0.045)",border:"rgba(255,255,255,0.08)",gold:"#f5c518",goldFade:"rgba(245,197,24,0.12)",text:"#e8f0fe",muted:"#7a8fa6",green:"#22c55e",orange:"#f97316",red:"#ef4444",blue:"#3b82f6",purple:"#a78bfa"};
 const S={
   app:{minHeight:"100vh",background:C.bg,color:C.text,fontFamily:"'Trebuchet MS','Segoe UI',sans-serif"},
@@ -54,100 +81,41 @@ const S={
 };
 function Bar({pct,color}){return(<div style={{height:5,borderRadius:3,background:"rgba(255,255,255,0.07)",overflow:"hidden",marginTop:5}}><div style={{height:"100%",width:`${Math.min(pct,100)}%`,background:color,borderRadius:3,transition:"width .7s"}}/></div>);}
 
-// ── SETUP SCREEN ────────────────────────────────────────────────────────────
-function Setup({onDone}){
+// Tela de nome (primeira vez)
+function NameSetup({onDone}){
   const[name,setName]=useState("");
-  const[semQualMeta,setSemQualMeta]=useState("");
-  const[semVisitMeta,setSemVisitMeta]=useState("");
   const[semQualDone,setSemQualDone]=useState("");
   const[semVisitDone,setSemVisitDone]=useState("");
-  const[agencies,setAgencies]=useState([{prefix:"",name:"",wallets:""}]);
-
-  function addAg(){setAgencies(a=>[...a,{prefix:"",name:"",wallets:""}]);}
-  function removeAg(i){setAgencies(a=>a.filter((_,idx)=>idx!==i));}
-  function updateAg(i,field,val){setAgencies(a=>a.map((x,idx)=>idx===i?{...x,[field]:val}:x));}
-
-  function finish(){
-    if(!name.trim()||agencies.length===0) return;
-    const ags=agencies.filter(a=>a.prefix.trim()).map((a,i)=>({
-      id:String(i+1),
-      prefix:a.prefix.trim(),
-      name:a.name.trim()||a.prefix.trim(),
-      wallets:a.wallets?a.wallets.split(",").map(w=>w.trim()).filter(Boolean):[],
-    }));
-    const profile={
-      name:name.trim(),
-      agencies:ags,
-      semQualMeta:Number(semQualMeta)||0,
-      semVisitMeta:Number(semVisitMeta)||0,
-      semQualDone:Number(semQualDone)||0,
-      semVisitDone:Number(semVisitDone)||0,
-    };
-    save("fc_profile",profile);
-    onDone(profile);
-  }
-
   return(
     <div style={S.app}>
       <div style={S.hdr}>
         <div style={{display:"flex",alignItems:"center",gap:9}}>
           <div style={{width:34,height:34,borderRadius:8,background:C.gold,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,color:"#001f3f",fontSize:11}}>FC</div>
-          <div><div style={{fontSize:13,fontWeight:700,color:C.gold}}>FALA CONSULTOR</div><div style={{fontSize:9,color:C.muted,letterSpacing:2,textTransform:"uppercase"}}>Configuração Inicial</div></div>
+          <div><div style={{fontSize:13,fontWeight:700,color:C.gold}}>FALA CONSULTOR</div><div style={{fontSize:9,color:C.muted,letterSpacing:2,textTransform:"uppercase"}}>BB Consórcio · RO</div></div>
         </div>
       </div>
       <div style={S.main}>
-        <div style={{...S.card,border:`1px solid ${C.gold}44`,background:`rgba(245,197,24,0.04)`}}>
-          <div style={S.sec}>👤 Seus Dados</div>
+        <div style={{...S.card,border:`1px solid ${C.gold}44`,background:`rgba(245,197,24,0.04)`,marginTop:20}}>
+          <div style={{fontSize:22,textAlign:"center",marginBottom:16}}>👋</div>
+          <div style={S.sec}>Bem-vindo ao Fala Consultor!</div>
+          <div style={{fontSize:12,color:C.muted,marginBottom:16}}>Informe seus dados para começar. Você só faz isso uma vez!</div>
           <label style={S.lbl}>Seu Nome</label>
-          <input style={S.inp} placeholder="Ex: Wagner Silva" value={name} onChange={e=>setName(e.target.value)}/>
-
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
-            <div>
-              <label style={S.lbl}>Meta Qualificados (semestre)</label>
-              <input type="number" style={S.inp} placeholder="Ex: 300" value={semQualMeta} onChange={e=>setSemQualMeta(e.target.value)}/>
-            </div>
-            <div>
-              <label style={S.lbl}>Já realizados</label>
-              <input type="number" style={S.inp} placeholder="Ex: 215" value={semQualDone} onChange={e=>setSemQualDone(e.target.value)}/>
-            </div>
-            <div>
-              <label style={S.lbl}>Meta Visitas (semestre)</label>
-              <input type="number" style={S.inp} placeholder="Ex: 28" value={semVisitMeta} onChange={e=>setSemVisitMeta(e.target.value)}/>
-            </div>
-            <div>
-              <label style={S.lbl}>Já visitadas</label>
-              <input type="number" style={S.inp} placeholder="Ex: 18" value={semVisitDone} onChange={e=>setSemVisitDone(e.target.value)}/>
-            </div>
-          </div>
+          <input style={S.inp} placeholder="Ex: Wagner Pereira" value={name} onChange={e=>setName(e.target.value)}/>
+          <label style={S.lbl}>Qualificados já realizados no semestre</label>
+          <input type="number" style={S.inp} placeholder="Ex: 215" value={semQualDone} onChange={e=>setSemQualDone(e.target.value)}/>
+          <label style={S.lbl}>Agências já visitadas no semestre</label>
+          <input type="number" style={S.inp} placeholder="Ex: 18" value={semVisitDone} onChange={e=>setSemVisitDone(e.target.value)}/>
+          <button style={{...S.btn(C.gold,"#001f3f"),width:"100%",padding:"13px",fontSize:14,marginTop:4}} onClick={()=>{if(name.trim())onDone({name:name.trim(),semQualDone:Number(semQualDone)||0,semVisitDone:Number(semVisitDone)||0});}}>
+            ✓ Começar
+          </button>
         </div>
-
-        <div style={S.card}>
-          <div style={S.sec}>🏦 Suas Agências</div>
-          <div style={{fontSize:11,color:C.muted,marginBottom:12}}>Cadastre seus prefixos. Carteiras: separe por vírgula (ex: 131, 157, 7002)</div>
-          {agencies.map((ag,i)=>(
-            <div key={i} style={{background:"rgba(255,255,255,0.03)",border:`1px solid ${C.border}`,borderRadius:10,padding:12,marginBottom:10}}>
-              <div style={{display:"flex",gap:8,marginBottom:8}}>
-                <input style={{...S.inp,marginBottom:0,flex:"0 0 90px"}} placeholder="Prefixo" value={ag.prefix} onChange={e=>updateAg(i,"prefix",e.target.value)}/>
-                <input style={{...S.inp,marginBottom:0,flex:1}} placeholder="Nome da agência" value={ag.name} onChange={e=>updateAg(i,"name",e.target.value)}/>
-                {agencies.length>1&&<button style={{...S.btn("rgba(239,68,68,0.15)",C.red,"8px 10px"),fontSize:11}} onClick={()=>removeAg(i)}>✕</button>}
-              </div>
-              <input style={{...S.inp,marginBottom:0}} placeholder="Carteiras (ex: 131, 157, 7002)" value={ag.wallets} onChange={e=>updateAg(i,"wallets",e.target.value)}/>
-            </div>
-          ))}
-          <button style={{...S.btn("rgba(255,255,255,0.07)",C.muted),width:"100%",fontSize:12}} onClick={addAg}>+ Adicionar Agência</button>
-        </div>
-
-        <button style={{...S.btn(C.gold,"#001f3f"),width:"100%",padding:"14px",fontSize:15,marginTop:4}} onClick={finish}>
-          ✓ Salvar e Começar
-        </button>
       </div>
     </div>
   );
 }
 
-// ── MAIN APP ────────────────────────────────────────────────────────────────
 function App(){
-  const[profile,setProfile]=useState(()=>load("fc_profile",null));
+  const[profile,setProfile]=useState(()=>load("fc2_profile",null));
   const[atts,setAtts]=useState(()=>load("fc_atts",[]));
   const[pends,setPends]=useState(()=>load("fc_pend",[]));
   const[monthVisits,setMV]=useState(()=>load("fc_mv",{}));
@@ -157,39 +125,35 @@ function App(){
   const[visitModal,setVisitModal]=useState(false);
   const[visitMonth,setVisitMonth]=useState(CUR_YM);
   const[walletAg,setWalletAg]=useState(null);
-  const[showConfig,setShowConfig]=useState(false);
+  const[editProfile,setEditProfile]=useState(false);
 
   const emptyForm={agencyId:"",type:"normal",manager:"",wallet:"",clientDoc:"",docType:"cpf",obs:"",hasPend:false,pendReturn:"",date:TODAY,time:nowT()};
   const[form,setForm]=useState(emptyForm);
   const[editId,setEditId]=useState(null);
 
+  useEffect(()=>save("fc2_profile",profile),[profile]);
   useEffect(()=>save("fc_atts",atts),[atts]);
   useEffect(()=>save("fc_pend",pends),[pends]);
   useEffect(()=>save("fc_mv",monthVisits),[monthVisits]);
 
-  if(!profile) return <Setup onDone={p=>setProfile(p)}/>;
+  if(!profile||editProfile) return <NameSetup onDone={p=>{setProfile(p);setEditProfile(false);}}/>;
 
-  const AGENCIES=profile.agencies||[];
-  const SEM_QUAL_META=profile.semQualMeta||0;
   const SEM_QUAL_DONE_BASE=profile.semQualDone||0;
-  const SEM_VISIT_META=profile.semVisitMeta||0;
   const SEM_VISIT_DONE_BASE=profile.semVisitDone||0;
-  const MONTHLY_VISIT_META=Math.max(1,Math.ceil((SEM_VISIT_META-SEM_VISIT_DONE_BASE)/2));
 
   const todayAtts=atts.filter(a=>a.date===TODAY);
   const appQual=atts.filter(a=>ATT_TYPES.find(t=>t.id===a.type)?.blocQual).length;
   const totalQual=SEM_QUAL_DONE_BASE+appQual;
-  const qualPct=SEM_QUAL_META>0?Math.round((totalQual/SEM_QUAL_META)*100):0;
+  const qualPct=Math.round((totalQual/SEM_QUAL_META)*100);
 
-  const allVisitedSem=new Set();
-  AGENCIES.slice(0,SEM_VISIT_DONE_BASE).forEach(a=>allVisitedSem.add(a.id));
+  const allVisitedSem=new Set(AGENCIES.slice(0,SEM_VISIT_DONE_BASE).map(a=>a.id));
   Object.values(monthVisits).forEach(mv=>Object.keys(mv).forEach(id=>{if(mv[id]>0)allVisitedSem.add(id);}));
   const totalVisitSem=allVisitedSem.size;
-  const visitSemPct=SEM_VISIT_META>0?Math.round((totalVisitSem/SEM_VISIT_META)*100):0;
+  const visitSemPct=Math.round((totalVisitSem/SEM_VISIT_META)*100);
 
   const mvCur=monthVisits[CUR_YM]||{};
   const monthVisitCount=Object.values(mvCur).reduce((a,b)=>a+b,0);
-  const monthVisitPct=MONTHLY_VISIT_META>0?Math.round((monthVisitCount/MONTHLY_VISIT_META)*100):0;
+  const monthVisitPct=Math.round((monthVisitCount/MONTHLY_VISIT_META)*100);
   const openPend=pends.filter(p=>!p.done);
   const allMonths=[...new Set([CUR_YM,...Object.keys(monthVisits)])].sort((a,b)=>b.localeCompare(a));
   const semMonths=["2026-01","2026-02","2026-03","2026-04","2026-05","2026-06"];
@@ -212,7 +176,7 @@ function App(){
 
   function buildReport(date){
     const list=atts.filter(a=>a.date===date);
-    if(!list.length)return`📋 RELATÓRIO FALA CONSULTOR — ${fmtDate(date)}\n\nNenhum atendimento registrado.`;
+    if(!list.length)return`📋 RELATÓRIO FALA CONSULTOR — ${fmtDate(date)}\nConsultor: ${profile.name}\n\nNenhum atendimento registrado.`;
     const lines=[`📋 RELATÓRIO FALA CONSULTOR — ${fmtDate(date)}`,`Consultor: ${profile.name}`,""];
     const byAg={};
     list.forEach(a=>{const ag=AGENCIES.find(x=>x.id===a.agencyId);const k=ag?`${ag.prefix} — ${ag.name}`:"—";if(!byAg[k])byAg[k]=[];byAg[k].push(a);});
@@ -222,8 +186,6 @@ function App(){
     lines.push(`─────────────────`);lines.push(`Total: ${list.length} | Qualificados: ${q} | Visitas: ${v}`);
     return lines.join("\n");
   }
-
-  if(showConfig) return <Setup onDone={p=>{setProfile(p);setShowConfig(false);}}/>;
 
   if(screen==="home")return(
     <div style={S.app}>
@@ -235,7 +197,7 @@ function App(){
         <div style={{display:"flex",gap:7}}>
           <button style={S.btn("rgba(255,255,255,0.07)",C.muted,"6px 11px")} onClick={()=>setScreen("report")}>Relatório</button>
           <button style={S.btn(C.goldFade,C.gold,"6px 11px")} onClick={()=>{setVisitModal(true);setVisitMonth(CUR_YM);}}>📍 Visitas</button>
-          <button style={S.btn("rgba(255,255,255,0.07)",C.muted,"6px 11px")} onClick={()=>setShowConfig(true)}>⚙️</button>
+          <button style={S.btn("rgba(255,255,255,0.07)",C.muted,"6px 11px")} onClick={()=>setEditProfile(true)}>⚙️</button>
         </div>
       </div>
       <div style={S.main}>
@@ -250,7 +212,7 @@ function App(){
 
         {homeTab==="dash"&&<>
           <div style={S.card}>
-            <div style={S.sec}>Metas Semestrais</div>
+            <div style={S.sec}>Metas Semestrais — Jan/Jun 2026</div>
             <div style={{marginBottom:14}}>
               <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:12}}>Atend. Qualificados</span><span style={{fontSize:11,color:C.muted}}>{totalQual}/{SEM_QUAL_META} · {qualPct}%</span></div>
               <Bar pct={qualPct} color={qualPct>=72?C.green:C.orange}/>
@@ -273,18 +235,23 @@ function App(){
           </div>
           <div style={S.card}>
             <div style={S.sec}>Mapa de Agências</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-              {AGENCIES.map(ag=>{
-                const visited=allVisitedSem.has(ag.id);
-                const mvCount=(monthVisits[CUR_YM]||{})[ag.id]||0;
-                const attW=getAttendedWallets(ag.id);
-                return(<div key={ag.id} onClick={()=>setWalletAg(ag)} style={{background:visited?"rgba(34,197,94,0.09)":"rgba(255,255,255,0.03)",border:`1px solid ${visited?"#22c55e44":C.border}`,borderRadius:8,padding:"8px 10px",cursor:"pointer"}}>
-                  <div style={{display:"flex",justifyContent:"space-between"}}><div style={{fontSize:12,fontWeight:700,color:visited?C.green:C.text}}>{ag.prefix}</div>{ag.wallets.length>1&&<div style={{fontSize:9,color:C.muted}}>{attW.length}/{ag.wallets.length}</div>}</div>
-                  <div style={{fontSize:10,color:C.muted}}>{ag.name}</div>
-                  <div style={{fontSize:9,marginTop:2,color:visited?C.green:C.orange}}>{visited?"✓ Visitada":"○ Pendente"}{mvCount>0&&<span style={{color:C.blue,marginLeft:4}}>·{mvCount}x mês</span>}</div>
-                </div>);
-              })}
-            </div>
+            {GROUPS.map(grp=>(
+              <div key={grp} style={{marginBottom:12}}>
+                <div style={{fontSize:9,color:C.muted,letterSpacing:1.5,textTransform:"uppercase",marginBottom:6}}>{grp}</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                  {AGENCIES.filter(a=>a.group===grp).map(ag=>{
+                    const visited=allVisitedSem.has(ag.id);
+                    const mvCount=(monthVisits[CUR_YM]||{})[ag.id]||0;
+                    const attW=getAttendedWallets(ag.id);
+                    return(<div key={ag.id} onClick={()=>setWalletAg(ag)} style={{background:visited?"rgba(34,197,94,0.09)":"rgba(255,255,255,0.03)",border:`1px solid ${visited?"#22c55e44":C.border}`,borderRadius:8,padding:"8px 10px",cursor:"pointer"}}>
+                      <div style={{display:"flex",justifyContent:"space-between"}}><div style={{fontSize:12,fontWeight:700,color:visited?C.green:C.text}}>{ag.prefix}</div>{ag.wallets.length>1&&<div style={{fontSize:9,color:C.muted}}>{attW.length}/{ag.wallets.length}</div>}</div>
+                      <div style={{fontSize:10,color:C.muted}}>{ag.name}</div>
+                      <div style={{fontSize:9,marginTop:2,color:visited?C.green:C.orange}}>{visited?"✓ Visitada":"○ Pendente"}{mvCount>0&&<span style={{color:C.blue,marginLeft:4}}>·{mvCount}x mês</span>}</div>
+                    </div>);
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </>}
 
@@ -297,7 +264,7 @@ function App(){
               </div>
             ))}
           </div>
-          {todayAtts.length===0&&<div style={{...S.card,textAlign:"center",padding:32}}><div style={{fontSize:32,marginBottom:8}}>📋</div><div style={{color:C.muted,fontSize:13}}>Nenhum atendimento hoje ainda.</div></div>}
+          {todayAtts.length===0&&<div style={{...S.card,textAlign:"center",padding:32}}><div style={{fontSize:32,marginBottom:8}}>📋</div><div style={{color:C.muted,fontSize:13}}>Nenhum atendimento hoje ainda.</div><div style={{color:C.muted,fontSize:11,marginTop:4}}>Toque em + para registrar.</div></div>}
           {todayAtts.map(a=>{const ag=AGENCIES.find(x=>x.id===a.agencyId);const t=ATT_TYPES.find(x=>x.id===a.type)||ATT_TYPES[0];return(
             <div key={a.id} style={{background:`${t.color}0d`,border:`1px solid ${t.color}33`,borderRadius:10,padding:12,marginBottom:8}}>
               <div style={{display:"flex",justifyContent:"space-between"}}><div><span style={{fontSize:12,fontWeight:700,color:t.color}}>{t.short}</span><span style={{fontSize:11,color:C.muted,marginLeft:8}}>{a.time}</span></div><button style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:15}} onClick={()=>deleteAtt(a.id)}>✕</button></div>
@@ -326,7 +293,7 @@ function App(){
         {homeTab==="carteiras"&&<>
           {AGENCIES.map(ag=>{const attW=getAttendedWallets(ag.id);const pct=ag.wallets.length>0?Math.round((attW.length/ag.wallets.length)*100):0;return(
             <div key={ag.id} style={{...S.card,marginBottom:9}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><div><span style={{fontWeight:700,color:C.gold,fontSize:13}}>{ag.prefix}</span><span style={{color:C.muted,fontSize:11,marginLeft:7}}>{ag.name}</span></div><span style={{fontSize:11,color:attW.length===ag.wallets.length&&ag.wallets.length>0?C.green:C.muted}}>{attW.length}/{ag.wallets.length}</span></div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><div><span style={{fontWeight:700,color:C.gold,fontSize:13}}>{ag.prefix}</span><span style={{color:C.muted,fontSize:11,marginLeft:7}}>{ag.name}</span></div><span style={{fontSize:11,color:attW.length===ag.wallets.length?C.green:C.muted}}>{attW.length}/{ag.wallets.length}</span></div>
               <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{ag.wallets.map(w=>{const done=attW.includes(String(w));return(<span key={w} style={{padding:"3px 10px",borderRadius:14,fontSize:11,fontWeight:600,background:done?"rgba(34,197,94,0.15)":"rgba(255,255,255,0.05)",border:`1px solid ${done?"#22c55e55":C.border}`,color:done?C.green:C.muted}}>{done?"✓ ":""}{w}</span>);})}</div>
               {ag.wallets.length>1&&<Bar pct={pct} color={pct===100?C.green:C.orange}/>}
             </div>
@@ -364,23 +331,28 @@ function App(){
             </div>
             <div style={{overflowY:"auto",padding:"12px 14px 20px"}}>
               {(()=>{const mv=monthVisits[visitMonth]||{};const total=Object.values(mv).reduce((a,b)=>a+b,0);return(<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:C.goldFade,borderRadius:9,padding:"9px 13px",marginBottom:12}}><span style={{fontSize:12,color:C.gold}}>Visitas em {fmtYM(visitMonth)}</span><span style={{fontSize:18,fontWeight:900,color:C.gold}}>{total} <span style={{fontSize:11,color:C.muted}}>/ {MONTHLY_VISIT_META}</span></span></div>);})()}
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
-                {AGENCIES.map(ag=>{
-                  const count=(monthVisits[visitMonth]||{})[ag.id]||0;
-                  const semVisited=allVisitedSem.has(ag.id);
-                  return(<div key={ag.id} style={{background:count>0?"rgba(34,197,94,0.12)":"rgba(255,255,255,0.04)",border:`1px solid ${count>0?"#22c55e55":C.border}`,borderRadius:10,padding:"10px 11px"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                      <div style={{fontSize:12,fontWeight:700,color:count>0?C.green:C.text}}>{ag.prefix}</div>
-                      {count>0&&<div style={{display:"flex",gap:5,alignItems:"center"}}><button onClick={()=>unmarkVisit(ag.id,visitMonth)} style={{background:"rgba(239,68,68,0.2)",border:"none",color:C.red,borderRadius:6,padding:"1px 7px",fontSize:13,cursor:"pointer",fontWeight:700}}>−</button><span style={{background:C.green,color:"#fff",borderRadius:12,padding:"1px 7px",fontSize:11,fontWeight:700}}>{count}x</span><button onClick={()=>markVisit(ag.id,visitMonth)} style={{background:"rgba(34,197,94,0.2)",border:"none",color:C.green,borderRadius:6,padding:"1px 7px",fontSize:13,cursor:"pointer",fontWeight:700}}>+</button></div>}
-                    </div>
-                    <div style={{fontSize:10,color:C.muted,marginTop:2}}>{ag.name}</div>
-                    <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
-                      <div style={{fontSize:9,color:semVisited?C.green:C.muted}}>{semVisited?"✓ semestre":"○ semestre"}</div>
-                      {count===0&&<button onClick={()=>markVisit(ag.id,visitMonth)} style={{background:C.goldFade,border:`1px solid ${C.gold}44`,color:C.gold,borderRadius:6,padding:"2px 10px",fontSize:10,cursor:"pointer",fontWeight:700}}>+ Visita</button>}
-                    </div>
-                  </div>);
-                })}
-              </div>
+              {GROUPS.map(grp=>(
+                <div key={grp} style={{marginBottom:14}}>
+                  <div style={{fontSize:9,color:C.muted,letterSpacing:1.5,textTransform:"uppercase",marginBottom:7}}>{grp}</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+                    {AGENCIES.filter(a=>a.group===grp).map(ag=>{
+                      const count=(monthVisits[visitMonth]||{})[ag.id]||0;
+                      const semVisited=allVisitedSem.has(ag.id);
+                      return(<div key={ag.id} style={{background:count>0?"rgba(34,197,94,0.12)":"rgba(255,255,255,0.04)",border:`1px solid ${count>0?"#22c55e55":C.border}`,borderRadius:10,padding:"10px 11px"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                          <div style={{fontSize:12,fontWeight:700,color:count>0?C.green:C.text}}>{ag.prefix}</div>
+                          {count>0&&<div style={{display:"flex",gap:5,alignItems:"center"}}><button onClick={()=>unmarkVisit(ag.id,visitMonth)} style={{background:"rgba(239,68,68,0.2)",border:"none",color:C.red,borderRadius:6,padding:"1px 7px",fontSize:13,cursor:"pointer",fontWeight:700}}>−</button><span style={{background:C.green,color:"#fff",borderRadius:12,padding:"1px 7px",fontSize:11,fontWeight:700}}>{count}x</span><button onClick={()=>markVisit(ag.id,visitMonth)} style={{background:"rgba(34,197,94,0.2)",border:"none",color:C.green,borderRadius:6,padding:"1px 7px",fontSize:13,cursor:"pointer",fontWeight:700}}>+</button></div>}
+                        </div>
+                        <div style={{fontSize:10,color:C.muted,marginTop:2}}>{ag.name}</div>
+                        <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
+                          <div style={{fontSize:9,color:semVisited?C.green:C.muted}}>{semVisited?"✓ semestre":"○ semestre"}</div>
+                          {count===0&&<button onClick={()=>markVisit(ag.id,visitMonth)} style={{background:C.goldFade,border:`1px solid ${C.gold}44`,color:C.gold,borderRadius:6,padding:"2px 10px",fontSize:10,cursor:"pointer",fontWeight:700}}>+ Visita</button>}
+                        </div>
+                      </div>);
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -412,7 +384,7 @@ function App(){
             <label style={S.lbl}>Prefixo / Agência</label>
             <select style={S.inp} value={form.agencyId} onChange={e=>setForm(f=>({...f,agencyId:e.target.value,wallet:""}))}>
               <option value="">Selecione...</option>
-              {AGENCIES.map(a=>(<option key={a.id} value={a.id}>{a.prefix} — {a.name}</option>))}
+              {GROUPS.map(grp=>(<optgroup key={grp} label={grp}>{AGENCIES.filter(a=>a.group===grp).map(a=>(<option key={a.id} value={a.id}>{a.prefix} — {a.name}</option>))}</optgroup>))}
             </select>
             <label style={S.lbl}>Tipo de Atendimento</label>
             <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:11}}>{ATT_TYPES.map(t=>(<button key={t.id} style={S.chip(t.color,form.type===t.id)} onClick={()=>setForm(f=>({...f,type:t.id}))}>{t.short}</button>))}</div>
