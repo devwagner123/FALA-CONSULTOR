@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="FALA CONSULTOR"/>
+<meta name="theme-color" content="#070d1a"/>
+<title>FALA CONSULTOR</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#070d1a}select option{background:#0d1630;color:#e8f0fe}</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect}=React;
+
+const AGENCIES=[
+  {id:"8416",prefix:"8416",name:"SUP RONDONIA",group:"SUPER RO",wallets:[7002]},
+  {id:"9155",prefix:"9155",name:"ESC EXCLUSIVO",group:"NIVEL A",wallets:[5,9,11,12,13,15,16,17,18,19,20,46,47]},
+  {id:"1178",prefix:"1178",name:"ARIQUEMES",group:"NIVEL A",wallets:[159,161,162,163,5028,7002]},
+  {id:"1401",prefix:"1401",name:"JARU",group:"NIVEL A",wallets:[130,131,156,157,158,159,168,5090,7002]},
+  {id:"951",prefix:"951",name:"JI PARANA",group:"NIVEL A",wallets:[142,145,148,172,7002]},
+  {id:"4004",prefix:"4004",name:"NOVA MAMORE",group:"NIVEL A",wallets:[149,152,153,7002]},
+  {id:"3997",prefix:"3997",name:"ALTO PARAISO",group:"NIVEL B",wallets:[140,137,7002]},
+  {id:"4268",prefix:"4268",name:"AV BRASIL JI PARANA",group:"NIVEL B",wallets:[94,96,97,105,7002]},
+  {id:"4286",prefix:"4286",name:"BURITIS",group:"NIVEL B",wallets:[7002]},
+  {id:"390",prefix:"390",name:"GUAJARA MIRIM",group:"NIVEL B",wallets:[155,5025,7002]},
+  {id:"2265",prefix:"2265",name:"MACHADINHO D'OESTE",group:"NIVEL B",wallets:[119,140,144,153,7002]},
+  {id:"4001",prefix:"4001",name:"MIRANTE DA SERRA",group:"NIVEL B",wallets:[145,147,148,7002]},
+  {id:"4002",prefix:"4002",name:"MONTE NEGRO",group:"NIVEL B",wallets:[131,7002]},
+  {id:"102",prefix:"102",name:"PORTO VELHO",group:"NIVEL B",wallets:[5050,7002]},
+  {id:"4007",prefix:"4007",name:"URUPA",group:"NIVEL B",wallets:[129,7002]},
+  {id:"8293",prefix:"8293",name:"PRESIDENTE MEDICI",group:"NIVEL C",wallets:[130,154,7002]},
+  {id:"3796",prefix:"3796",name:"AVENIDA CALAMA",group:"NIVEL C",wallets:[7002]},
+  {id:"2270",prefix:"2270",name:"JATUARANA",group:"NIVEL C",wallets:[7002]},
+  {id:"4000",prefix:"4000",name:"MINISTRO ANDREAZZA",group:"NIVEL C",wallets:[7002]},
+  {id:"3231",prefix:"3231",name:"NOVA PORTO VELHO",group:"NIVEL C",wallets:[7002]},
+  {id:"2173",prefix:"2173",name:"ALTA FLORESTA",group:"NIVEL C",wallets:[7002]},
+  {id:"2184",prefix:"2184",name:"ALVORADA DO OESTE",group:"NIVEL C",wallets:[144,146,148,7002]},
+  {id:"5885",prefix:"5885",name:"AVENIDA AMAZONAS",group:"NIVEL C",wallets:[7002]},
+  {id:"7133",prefix:"7133",name:"CANDEAS DO JAMARI",group:"NIVEL C",wallets:[44,45,7002]},
+  {id:"3181",prefix:"3181",name:"NACOES UNIDAS",group:"NIVEL C",wallets:[142,7002]},
+  {id:"2290",prefix:"2290",name:"PRESIDENTE DUTRA",group:"NIVEL C",wallets:[7002]},
+  {id:"3999",prefix:"3999",name:"CACAULANDIA",group:"NIVEL E",wallets:[7002]},
+  {id:"8291",prefix:"8291",name:"CAMPO NOVO",group:"NIVEL E",wallets:[7002]},
+];
+const GROUPS=["SUPER RO","NIVEL A","NIVEL B","NIVEL C","NIVEL E"];
+const ATT_TYPES=[
+  {id:"normal",label:"Normal",short:"Normal",color:"#60a5fa",blocQual:false,blocVisit:false},
+  {id:"qualificado",label:"Qualificado",short:"Qualificado",color:"#a78bfa",blocQual:true,blocVisit:false},
+  {id:"visita",label:"Visita Presencial",short:"Visita",color:"#22c55e",blocQual:false,blocVisit:true},
+];
+const SEM_QUAL_META=300;
+const SEM_VISIT_META=28;
+const MONTHLY_VISIT_META=5;
+const MONTHLY_QUAL_META=50;
+const SEM_MONTHS=["2026-07","2026-08","2026-09","2026-10","2026-11","2026-12"];
+
+const pad=n=>String(n).padStart(2,"0");
+const nowT=()=>{const d=new Date();return`${pad(d.getHours())}:${pad(d.getMinutes())}`;};
+const toISO=()=>new Date().toISOString().slice(0,10);
+const toYM=iso=>iso.slice(0,7);
+const fmtDate=iso=>{const[y,m,d]=iso.split("-");return`${d}/${m}/${y}`;};
+const fmtYM=ym=>{const[y,m]=ym.split("-");const N=["","Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];return`${N[+m]}/${y}`;};
+const TODAY=toISO(),CUR_YM=toYM(TODAY);
+const WEEKDAY=new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});
+const load=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}};
+const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
+
+const C={bg:"#070d1a",panel:"rgba(255,255,255,0.045)",border:"rgba(255,255,255,0.08)",gold:"#f5c518",goldFade:"rgba(245,197,24,0.12)",text:"#e8f0fe",muted:"#7a8fa6",green:"#22c55e",orange:"#f97316",red:"#ef4444",blue:"#3b82f6",purple:"#a78bfa"};
+const S={
+  app:{minHeight:"100vh",background:C.bg,color:C.text,fontFamily:"'Trebuchet MS','Segoe UI',sans-serif"},
+  hdr:{background:"rgba(4,10,28,0.97)",borderBottom:`1px solid ${C.gold}55`,padding:"11px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:40,backdropFilter:"blur(14px)"},
+  main:{maxWidth:700,margin:"0 auto",padding:"14px 13px 88px"},
+  card:{background:C.panel,border:`1px solid ${C.border}`,borderRadius:13,padding:15,marginBottom:12},
+  sec:{fontSize:10,fontWeight:700,color:C.gold,letterSpacing:2.5,textTransform:"uppercase",marginBottom:10},
+  lbl:{display:"block",fontSize:10,color:C.muted,letterSpacing:1.2,textTransform:"uppercase",marginBottom:5},
+  inp:{width:"100%",background:"rgba(255,255,255,0.06)",border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 11px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box",marginBottom:9,outline:"none"},
+  txta:{width:"100%",background:"rgba(255,255,255,0.06)",border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 11px",color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box",marginBottom:9,outline:"none",resize:"vertical",minHeight:60},
+  btn:(bg,fg,p)=>({padding:p||"9px 15px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:700,background:bg,color:fg||"#fff",fontFamily:"inherit"}),
+  chip:(color,on)=>({padding:"6px 11px",borderRadius:18,cursor:"pointer",fontSize:12,fontFamily:"inherit",border:`1px solid ${on?color:C.border}`,background:on?`${color}22`:"transparent",color:on?color:C.muted}),
+  tab:on=>({flex:1,padding:"9px 4px",textAlign:"center",fontSize:11,fontWeight:700,color:on?C.gold:C.muted,borderBottom:on?`2px solid ${C.gold}`:"2px solid transparent",cursor:"pointer",background:"none",border:"none",fontFamily:"inherit"}),
+  fab:{position:"fixed",bottom:20,right:16,width:52,height:52,borderRadius:26,background:C.gold,color:"#001f3f",fontSize:26,border:"none",cursor:"pointer",boxShadow:`0 4px 22px rgba(245,197,24,0.45)`,display:"flex",alignItems:"center",justifyContent:"center",zIndex:30},
+};
+function Bar({pct,color}){return(<div style={{height:6,borderRadius:3,background:"rgba(255,255,255,0.07)",overflow:"hidden",marginTop:6}}><div style={{height:"100%",width:`${Math.min(pct,100)}%`,background:color,borderRadius:3,transition:"width .7s"}}/></div>);}
+
+function Login({onEnter}){
+  const[name,setName]=useState(load("fc_name",""));
+  return(
+    <div style={{...S.app,display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{width:"100%",maxWidth:360,padding:"0 20px"}}>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{width:64,height:64,borderRadius:16,background:C.gold,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,color:"#001f3f",fontSize:22,margin:"0 auto 16px"}}>FC</div>
+          <div style={{fontSize:22,fontWeight:700,color:C.gold}}>FALA CONSULTOR</div>
+          <div style={{fontSize:11,color:C.muted,letterSpacing:2,textTransform:"uppercase",marginTop:4}}>BB Consórcio · RO</div>
+        </div>
+        <div style={{...S.card,border:`1px solid ${C.gold}44`}}>
+          <label style={S.lbl}>Seu Nome</label>
+          <input style={S.inp} placeholder="Digite seu nome..." value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&name.trim()&&onEnter(name.trim())} autoFocus/>
+          <button style={{...S.btn(C.gold,"#001f3f"),width:"100%",padding:"13px",fontSize:15,marginTop:4}} onClick={()=>name.trim()&&onEnter(name.trim())}>Entrar →</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App(){
+  const[loggedIn,setLoggedIn]=useState(()=>!!load("fc_name",""));
+  const[userName,setUserName]=useState(()=>load("fc_name",""));
+  const[atts,setAtts]=useState(()=>load("fc_atts",[]));
+  const[pends,setPends]=useState(()=>load("fc_pend",[]));
+  const[monthVisits,setMV]=useState(()=>load("fc_mv",{}));
+  const[screen,setScreen]=useState("home");
+  const[homeTab,setHomeTab]=useState("mensal");
+  const[selDate,setSelDate]=useState(TODAY);
+  const[visitModal,setVisitModal]=useState(false);
+  const[visitMonth,setVisitMonth]=useState(CUR_YM);
+  const[visitView,setVisitView]=useState("mensal");
+  const[settingsModal,setSettingsModal]=useState(false);
+  const[editNameVal,setEditNameVal]=useState("");
+  const[agModal,setAgModal]=useState(false);
+  const[editingAg,setEditingAg]=useState(null);
+  const[agForm,setAgForm]=useState({prefix:"",name:"",group:"NIVEL A"});
+  const[customAg,setCustomAg]=useState(()=>load("fc_custom_ag",null));
+  const[aiText,setAiText]=useState("");
+  const[aiLoad,setAiLoad]=useState(false);
+  const[aiResult,setAiResult]=useState(null);
+
+  const emptyForm={agencyId:"",type:"normal",manager:"",cargo:"",wallet:"",clientDoc:"",docType:"cpf",cotacao:"",obs:"",hasPend:false,pendReturn:"",date:TODAY,time:nowT()};
+  const[form,setForm]=useState(emptyForm);
+  const[editId,setEditId]=useState(null);
+
+  useEffect(()=>sv("fc_name",userName),[userName]);
+  useEffect(()=>sv("fc_atts",atts),[atts]);
+  useEffect(()=>sv("fc_pend",pends),[pends]);
+  useEffect(()=>sv("fc_mv",monthVisits),[monthVisits]);
+  useEffect(()=>sv("fc_custom_ag",customAg),[customAg]);
+
+  // Always use AGENCIES as base, customAg only adds/modifies
+  const AG = customAg && customAg.length>0 ? customAg : AGENCIES;
+
+  if(!loggedIn) return <Login onEnter={n=>{setUserName(n);sv("fc_name",n);setLoggedIn(true);}}/>;
+
+  const todayAtts=atts.filter(a=>a.date===TODAY);
+  const appQual=atts.filter(a=>ATT_TYPES.find(t=>t.id===a.type)?.blocQual).length;
+  const qualPct=Math.round((appQual/SEM_QUAL_META)*100);
+
+  const allVisitedSem=new Set();
+  Object.values(monthVisits).forEach(mv=>Object.keys(mv).forEach(id=>{if(mv[id]>0)allVisitedSem.add(id);}));
+  const totalVisitSem=allVisitedSem.size;
+  const visitSemPct=Math.round((totalVisitSem/SEM_VISIT_META)*100);
+
+  const mvCur=monthVisits[CUR_YM]||{};
+  const monthVisitCount=Object.values(mvCur).reduce((a,b)=>a+b,0);
+  const monthVisitPct=Math.round((monthVisitCount/MONTHLY_VISIT_META)*100);
+  const attsMonth=atts.filter(a=>toYM(a.date)===CUR_YM);
+  const qualMonth=attsMonth.filter(a=>ATT_TYPES.find(t=>t.id===a.type)?.blocQual).length;
+  const qualMonthPct=Math.round((qualMonth/MONTHLY_QUAL_META)*100);
+  const openPend=pends.filter(p=>!p.done);
+  const allMonths=[...new Set([CUR_YM,...Object.keys(monthVisits),...atts.map(a=>toYM(a.date))])].sort((a,b)=>b.localeCompare(a));
+
+  const markVisit=(id,ym)=>setMV(p=>{const m={...(p[ym]||{})};m[id]=(m[id]||0)+1;return{...p,[ym]:m};});
+  const unmarkVisit=(id,ym)=>setMV(p=>{const m={...(p[ym]||{})};if(m[id]>0)m[id]--;return{...p,[ym]:m};});
+
+  function saveAtt(){
+    if(!form.agencyId||!form.type)return;
+    const rec={...form,id:editId||Date.now()};
+    if(editId){setAtts(a=>a.map(x=>x.id===editId?rec:x));setEditId(null);}
+    else setAtts(a=>[rec,...a]);
+    if(form.hasPend&&form.obs){
+      const ag=AG.find(x=>x.id===form.agencyId);
+      setPends(p=>[...p,{id:Date.now()+1,agencyId:form.agencyId,agName:ag?`${ag.prefix} — ${ag.name}`:"",manager:form.manager,wallet:form.wallet,clientDoc:form.clientDoc,docType:form.docType,desc:form.obs,returnDate:form.pendReturn,done:false,createdAt:TODAY}]);
+    }
+    setForm(emptyForm);setScreen("home");
+  }
+
+  async function runAI(){
+    if(!aiText.trim())return;
+    setAiLoad(true);setAiResult(null);
+    const agList=AG.map(a=>`${a.id}=${a.prefix}/${a.name}`).join(", ");
+    try{
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:400,messages:[{role:"user",content:`Assistente BB Consórcio RO. Agências: ${agList}. Tipos: normal,qualificado,visita. JSON sem markdown: {"agencyId":"","type":"normal","manager":"","wallet":"","clientDoc":"","docType":"cpf","cotacao":"","obs":"","hasPend":false,"pendReturn":""}. Texto: "${aiText}"`}]})});
+      const d=await r.json();
+      const txt=d.content?.map(c=>c.text||"").join("")||"";
+      const p=JSON.parse(txt.replace(/```json|```/g,"").trim());
+      const ag=AG.find(a=>a.id===p.agencyId||a.prefix===p.agencyId);
+      setAiResult({...p,agencyId:ag?.id||"",agName:ag?`${ag.prefix} — ${ag.name}`:""});
+    }catch{setAiResult({error:"Não consegui interpretar."});}
+    setAiLoad(false);
+  }
+
+  function saveAIDirect(){
+    if(!aiResult||aiResult.error)return;
+    const rec={...emptyForm,...aiResult,id:Date.now(),date:TODAY,time:nowT()};
+    setAtts(a=>[rec,...a]);
+    if(rec.hasPend&&rec.obs){const ag=AG.find(x=>x.id===rec.agencyId);setPends(p=>[...p,{id:Date.now()+1,agencyId:rec.agencyId,agName:ag?`${ag.prefix} — ${ag.name}`:"",manager:rec.manager,wallet:rec.wallet,clientDoc:rec.clientDoc,docType:rec.docType,desc:rec.obs,returnDate:rec.pendReturn,done:false,createdAt:TODAY}]);}
+    setAiText("");setAiResult(null);
+  }
+
+  function buildReport(date){
+    const list=atts.filter(a=>a.date===date);
+    if(!list.length)return`📋 RELATÓRIO FALA CONSULTOR — ${fmtDate(date)}\nConsultor: ${userName}\n\nNenhum atendimento registrado.`;
+    const lines=[`📋 RELATÓRIO FALA CONSULTOR — ${fmtDate(date)}`,`Consultor: ${userName}`,""];
+    const byAg={};
+    list.forEach(a=>{const ag=AG.find(x=>x.id===a.agencyId);const k=ag?`${ag.prefix} — ${ag.name}`:"—";if(!byAg[k])byAg[k]=[];byAg[k].push(a);});
+    Object.entries(byAg).forEach(([ag,ls])=>{lines.push(`🏦 ${ag}`);ls.forEach(a=>{const t=ATT_TYPES.find(x=>x.id===a.type);let ln=`  • [${a.time}] ${t?.label||a.type}`;if(a.manager)ln+=` — ${a.manager}`;if(a.cargo)ln+=` (${a.cargo})`;if(a.wallet)ln+=` Cart.${a.wallet}`;if(a.clientDoc)ln+=` | ${a.docType?.toUpperCase()}: ${a.clientDoc}`;if(a.cotacao)ln+=` | Cotação: R$ ${Number(a.cotacao).toLocaleString("pt-BR")}`;if(a.obs)ln+=`\n    📝 ${a.obs}`;if(a.hasPend)ln+=`\n    ⏳ Retorno: ${a.pendReturn?fmtDate(a.pendReturn):"a combinar"}`;lines.push(ln);});lines.push("");});
+    const q=list.filter(a=>ATT_TYPES.find(t=>t.id===a.type)?.blocQual).length;
+    const v=list.filter(a=>ATT_TYPES.find(t=>t.id===a.type)?.blocVisit).length;
+    lines.push(`─────────────────`);lines.push(`Total: ${list.length} | Qualificados: ${q} | Visitas: ${v}`);
+    return lines.join("\n");
+  }
+
+  if(screen==="home")return(
+    <div style={S.app}>
+      <div style={S.hdr}>
+        <div style={{display:"flex",alignItems:"center",gap:9}}>
+          <div style={{width:34,height:34,borderRadius:8,background:C.gold,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,color:"#001f3f",fontSize:11}}>FC</div>
+          <div><div style={{fontSize:13,fontWeight:700,color:C.gold}}>FALA CONSULTOR</div><div style={{fontSize:9,color:C.muted,letterSpacing:2,textTransform:"uppercase"}}>{userName}</div></div>
+        </div>
+        <div style={{display:"flex",gap:7}}>
+          <button style={S.btn("rgba(255,255,255,0.07)",C.muted,"6px 11px")} onClick={()=>setScreen("report")}>📋</button>
+          <button style={S.btn(C.goldFade,C.gold,"6px 11px")} onClick={()=>{setVisitModal(true);setVisitMonth(CUR_YM);}}>📍</button>
+          <button style={S.btn("rgba(255,255,255,0.07)",C.muted,"6px 11px")} onClick={()=>{setEditNameVal(userName);setSettingsModal(true);}}>⚙️</button>
+        </div>
+      </div>
+
+      <div style={S.main}>
+        <div style={{fontSize:11,color:C.muted,marginBottom:12,textTransform:"capitalize"}}>📅 {WEEKDAY}</div>
+
+        {/* AI CAPTURE */}
+        <div style={{...S.card,border:`1px solid ${C.gold}44`,background:`rgba(245,197,24,0.04)`,marginBottom:13}}>
+          <div style={{fontSize:10,fontWeight:700,color:C.gold,letterSpacing:2,textTransform:"uppercase",marginBottom:8}}>⚡ Registro Rápido</div>
+          <textarea style={{...S.txta,minHeight:48,marginBottom:8}} placeholder='Ex: "Visitei 1401 Jaru, falei com João cart 131, apresentei imóvel"' value={aiText} onChange={e=>setAiText(e.target.value)}/>
+          <div style={{display:"flex",gap:8}}>
+            <button style={{...S.btn(C.gold,"#001f3f"),flex:1,opacity:aiLoad?.7:1}} onClick={runAI} disabled={aiLoad}>{aiLoad?"Interpretando...":"🤖 Registrar com IA"}</button>
+            <button style={S.btn("rgba(255,255,255,0.07)",C.muted,"9px 12px")} onClick={()=>setScreen("register")}>Manual</button>
+          </div>
+          {aiResult&&!aiResult.error&&(
+            <div style={{marginTop:9,background:"rgba(34,197,94,0.08)",border:"1px solid #22c55e44",borderRadius:9,padding:11}}>
+              <div style={{fontSize:11,color:C.green,fontWeight:700,marginBottom:5}}>✓ Entendido:</div>
+              <div style={{fontSize:12,color:C.text,lineHeight:1.8}}>
+                🏦 {aiResult.agName||"—"}<br/>
+                📋 {ATT_TYPES.find(t=>t.id===aiResult.type)?.label||aiResult.type}<br/>
+                {aiResult.manager&&<>👤 {aiResult.manager}{aiResult.wallet?` · Cart.${aiResult.wallet}`:""}<br/></>}
+                {aiResult.clientDoc&&<>🪪 {aiResult.docType?.toUpperCase()}: {aiResult.clientDoc}<br/></>}
+                {aiResult.cotacao&&<>💰 R$ {Number(aiResult.cotacao).toLocaleString("pt-BR")}<br/></>}
+                {aiResult.obs&&<>📝 {aiResult.obs}<br/></>}
+                {aiResult.hasPend&&<>⏳ Retorno: {aiResult.pendReturn?fmtDate(aiResult.pendReturn):"a combinar"}<br/></>}
+              </div>
+              <div style={{display:"flex",gap:8,marginTop:8}}>
+                <button style={{...S.btn(C.green,"#fff"),flex:1,fontSize:12}} onClick={saveAIDirect}>✓ Salvar</button>
+                <button style={{...S.btn("rgba(255,255,255,0.07)",C.muted,"8px 12px"),fontSize:12}} onClick={()=>setAiResult(null)}>✕</button>
+              </div>
+            </div>
+          )}
+          {aiResult?.error&&<div style={{marginTop:8,color:C.red,fontSize:12}}>⚠️ {aiResult.error}</div>}
+        </div>
+
+        {/* TABS */}
+        <div style={{display:"flex",borderBottom:`1px solid ${C.border}`,marginBottom:13}}>
+          {[["mensal","Mensal"],["semestral","Semestral"],["hoje","Hoje"],["pend","Pendências"]].map(([k,l])=>(
+            <button key={k} style={S.tab(homeTab===k)} onClick={()=>setHomeTab(k)}>
+              {l}{k==="pend"&&openPend.length>0&&<span style={{marginLeft:3,background:C.orange,color:"#fff",borderRadius:9,padding:"1px 5px",fontSize:9}}>{openPend.length}</span>}
+            </button>
+          ))}
+        </div>
+
+        {/* MENSAL */}
+        {homeTab==="mensal"&&<>
+          <div style={{display:"flex",gap:9,marginBottom:12}}>
+            {[[monthVisitCount,"Visitas",C.green,MONTHLY_VISIT_META],[qualMonth,"Qualificados",C.purple,MONTHLY_QUAL_META],[attsMonth.length,"Atendimentos",C.blue,null]].map(([n,l,c,m])=>(
+              <div key={l} style={{flex:1,background:`${c}12`,border:`1px solid ${c}33`,borderRadius:11,padding:"11px 8px",textAlign:"center"}}>
+                <div style={{fontSize:22,fontWeight:900,color:c,lineHeight:1}}>{n}{m?<span style={{fontSize:11,color:C.muted,fontWeight:400}}> /{m}</span>:""}</div>
+                <div style={{fontSize:9,color:C.muted,marginTop:3,textTransform:"uppercase"}}>{l}</div>
+              </div>
+            ))}
+          </div>
+          <div style={S.card}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+              <div style={{fontSize:11,fontWeight:700,color:C.gold,letterSpacing:1.5,textTransform:"uppercase"}}>{fmtYM(CUR_YM)}</div>
+              <button style={S.btn(C.goldFade,C.gold,"5px 11px")} onClick={()=>{setVisitModal(true);setVisitMonth(CUR_YM);}}>📍 Marcar Visita</button>
+            </div>
+            <div style={{marginBottom:12}}>
+              <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:12}}>Visitas</span><span style={{fontSize:11,color:C.muted}}>{monthVisitCount}/{MONTHLY_VISIT_META} · {monthVisitPct}%</span></div>
+              <Bar pct={monthVisitPct} color={monthVisitPct>=100?C.green:C.orange}/>
+              <div style={{fontSize:10,color:C.muted,marginTop:3}}>Faltam <b style={{color:C.gold}}>{Math.max(0,MONTHLY_VISIT_META-monthVisitCount)}</b> visitas</div>
+            </div>
+            <div>
+              <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:12}}>Qualificados</span><span style={{fontSize:11,color:C.muted}}>{qualMonth}/{MONTHLY_QUAL_META} · {qualMonthPct}%</span></div>
+              <Bar pct={qualMonthPct} color={qualMonthPct>=100?C.green:C.purple}/>
+              <div style={{fontSize:10,color:C.muted,marginTop:3}}>Faltam <b style={{color:C.gold}}>{Math.max(0,MONTHLY_QUAL_META-qualMonth)}</b> qualificados</div>
+            </div>
+          </div>
+          <div style={S.card}>
+            <div style={S.sec}>Prefixos — {fmtYM(CUR_YM)}</div>
+            {GROUPS.map(grp=>(
+              <div key={grp} style={{marginBottom:12}}>
+                <div style={{fontSize:9,color:C.muted,letterSpacing:1.5,textTransform:"uppercase",marginBottom:6}}>{grp}</div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {AG.filter(a=>a.group===grp).map(ag=>{
+                    const count=(monthVisits[CUR_YM]||{})[ag.id]||0;
+                    return(
+                      <div key={ag.id} onClick={()=>count===0&&markVisit(ag.id,CUR_YM)}
+                        style={{background:count>0?"rgba(34,197,94,0.12)":"rgba(255,255,255,0.04)",border:`1px solid ${count>0?"#22c55e55":C.border}`,borderRadius:10,padding:"10px 14px",cursor:count===0?"pointer":"default",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <div>
+                          <span style={{fontSize:13,fontWeight:700,color:count>0?C.green:C.text}}>{ag.prefix}</span>
+                          <span style={{fontSize:12,color:count>0?C.green:C.muted,marginLeft:8}}>{ag.name}</span>
+                        </div>
+                        {count>0?(
+                          <div style={{display:"flex",alignItems:"center",gap:6}}>
+                            <button onClick={e=>{e.stopPropagation();unmarkVisit(ag.id,CUR_YM);}} style={{background:"rgba(239,68,68,0.2)",border:"none",color:C.red,borderRadius:7,padding:"3px 9px",fontSize:15,cursor:"pointer",fontWeight:700}}>−</button>
+                            <span style={{background:C.green,color:"#fff",borderRadius:10,padding:"2px 8px",fontSize:11,fontWeight:700}}>{count}x</span>
+                            <button onClick={e=>{e.stopPropagation();markVisit(ag.id,CUR_YM);}} style={{background:"rgba(34,197,94,0.2)",border:"none",color:C.green,borderRadius:7,padding:"3px 9px",fontSize:15,cursor:"pointer",fontWeight:700}}>+</button>
+                          </div>
+                        ):(
+                          <span style={{fontSize:10,color:C.muted}}>toque p/ marcar</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+          {allMonths.filter(ym=>ym!==CUR_YM).length>0&&<>
+            <div style={{...S.sec,marginTop:4}}>Histórico</div>
+            {allMonths.filter(ym=>ym!==CUR_YM).map(ym=>{
+              const mv=monthVisits[ym]||{};
+              const total=Object.values(mv).reduce((a,b)=>a+b,0);
+              const attsM=atts.filter(a=>toYM(a.date)===ym);
+              const qualM=attsM.filter(a=>ATT_TYPES.find(t=>t.id===a.type)?.blocQual).length;
+              return(
+                <div key={ym} style={S.card}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                    <div style={{fontSize:13,fontWeight:700,color:C.gold}}>{fmtYM(ym)}</div>
+                    <button style={S.btn(C.goldFade,C.gold,"4px 9px")} onClick={()=>{setVisitModal(true);setVisitMonth(ym);}}>📍</button>
+                  </div>
+                  <div style={{display:"flex",gap:9}}>{[[total,"Visitas",C.green],[qualM,"Qualificados",C.purple],[attsM.length,"Atendimentos",C.blue]].map(([n,l,c])=>(<div key={l} style={{flex:1,background:`${c}10`,border:`1px solid ${c}30`,borderRadius:9,padding:"8px 6px",textAlign:"center"}}><div style={{fontSize:18,fontWeight:900,color:c}}>{n}</div><div style={{fontSize:9,color:C.muted,textTransform:"uppercase"}}>{l}</div></div>))}</div>
+                </div>
+              );
+            })}
+          </>}
+        </>}
+
+        {/* SEMESTRAL */}
+        {homeTab==="semestral"&&<>
+          <div style={S.card}>
+            <div style={S.sec}>Jul — Dez 2026</div>
+            <div style={{marginBottom:16}}>
+              <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:13}}>Atend. Qualificados</span><span style={{fontSize:12,color:C.muted}}>{appQual} / {SEM_QUAL_META}</span></div>
+              <Bar pct={qualPct} color={qualPct>=100?C.green:C.orange}/>
+              <div style={{fontSize:10,color:C.muted,marginTop:3}}>{qualPct}% · Faltam <b style={{color:C.gold}}>{Math.max(0,SEM_QUAL_META-appQual)}</b></div>
+            </div>
+            <div>
+              <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:13}}>Prefixos Visitados</span><span style={{fontSize:12,color:C.muted}}>{totalVisitSem} / {SEM_VISIT_META}</span></div>
+              <Bar pct={visitSemPct} color={visitSemPct>=100?C.green:C.orange}/>
+              <div style={{fontSize:10,color:C.muted,marginTop:3}}>{visitSemPct}% · Faltam <b style={{color:C.gold}}>{Math.max(0,SEM_VISIT_META-totalVisitSem)}</b></div>
+            </div>
+          </div>
+          <div style={S.card}>
+            <div style={S.sec}>Mapa de Prefixos</div>
+            {GROUPS.map(grp=>(
+              <div key={grp} style={{marginBottom:12}}>
+                <div style={{fontSize:9,color:C.muted,letterSpacing:1.5,textTransform:"uppercase",marginBottom:6}}>{grp}</div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {AG.filter(a=>a.group===grp).map(ag=>{
+                    const visited=allVisitedSem.has(ag.id);
+                    return(
+                      <div key={ag.id} style={{background:visited?"rgba(34,197,94,0.09)":"rgba(255,255,255,0.03)",border:`1px solid ${visited?"#22c55e44":C.border}`,borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <div>
+                          <span style={{fontSize:13,fontWeight:700,color:visited?C.green:C.text}}>{ag.prefix}</span>
+                          <span style={{fontSize:12,color:visited?C.green:C.muted,marginLeft:8}}>{ag.name}</span>
+                        </div>
+                        <span style={{fontSize:12,color:visited?C.green:C.orange}}>{visited?"✓":""}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>}
+
+        {/* HOJE */}
+        {homeTab==="hoje"&&<>
+          <div style={{display:"flex",gap:9,marginBottom:12}}>
+            {[[todayAtts.length,"Atendimentos",C.blue],[todayAtts.filter(a=>ATT_TYPES.find(t=>t.id===a.type)?.blocQual).length,"Qualificados",C.purple],[todayAtts.filter(a=>ATT_TYPES.find(t=>t.id===a.type)?.blocVisit).length,"Visitas",C.green]].map(([n,l,c])=>(
+              <div key={l} style={{flex:1,background:`${c}12`,border:`1px solid ${c}33`,borderRadius:11,padding:"11px 8px",textAlign:"center"}}>
+                <div style={{fontSize:24,fontWeight:900,color:c,lineHeight:1}}>{n}</div>
+                <div style={{fontSize:9,color:C.muted,marginTop:3,textTransform:"uppercase"}}>{l}</div>
+              </div>
+            ))}
+          </div>
+          {todayAtts.length===0&&<div style={{...S.card,textAlign:"center",padding:32}}><div style={{fontSize:32,marginBottom:8}}>📋</div><div style={{color:C.muted,fontSize:13}}>Nenhum atendimento hoje.</div></div>}
+          {todayAtts.map(a=>{const ag=AG.find(x=>x.id===a.agencyId);const t=ATT_TYPES.find(x=>x.id===a.type)||ATT_TYPES[0];return(
+            <div key={a.id} style={{background:`${t.color}0d`,border:`1px solid ${t.color}33`,borderRadius:10,padding:12,marginBottom:8}}>
+              <div style={{display:"flex",justifyContent:"space-between"}}><div><span style={{fontSize:12,fontWeight:700,color:t.color}}>{t.short}</span><span style={{fontSize:11,color:C.muted,marginLeft:8}}>{a.time}</span></div><button style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:15}} onClick={()=>setAtts(x=>x.filter(i=>i.id!==a.id))}>✕</button></div>
+              <div style={{fontSize:13,marginTop:4}}>🏦 {ag?`${ag.prefix} — ${ag.name}`:"—"}</div>
+              {a.manager&&<div style={{fontSize:11,color:C.muted}}>👤 {a.manager}{a.cargo?` · ${a.cargo}`:""}{a.wallet?` · Cart.${a.wallet}`:""}</div>}
+              {a.clientDoc&&<div style={{fontSize:11,color:C.muted}}>🪪 {a.docType?.toUpperCase()}: {a.clientDoc}</div>}
+              {a.cotacao&&<div style={{fontSize:11,color:C.gold}}>💰 R$ {Number(a.cotacao).toLocaleString("pt-BR")}</div>}
+              {a.obs&&<div style={{fontSize:11,color:C.muted,marginTop:3}}>📝 {a.obs}</div>}
+              {a.hasPend&&<div style={{fontSize:11,color:C.orange,marginTop:3}}>⏳ {a.pendReturn?fmtDate(a.pendReturn):"a combinar"}</div>}
+            </div>
+          );})}
+        </>}
+
+        {/* PENDÊNCIAS */}
+        {homeTab==="pend"&&<>
+          {openPend.length===0&&<div style={{...S.card,textAlign:"center",padding:28,color:C.muted,fontSize:13}}>✅ Sem pendências em aberto!</div>}
+          {pends.map(p=>(
+            <div key={p.id} style={{background:p.done?"rgba(255,255,255,0.02)":"rgba(249,115,22,0.07)",border:`1px solid ${p.done?C.border:"#f9731633"}`,borderRadius:10,padding:12,marginBottom:8,opacity:p.done?.55:1}}>
+              <div style={{display:"flex",justifyContent:"space-between"}}><div style={{fontSize:12,fontWeight:700,color:p.done?C.muted:C.orange}}>{p.agName}</div><div style={{display:"flex",gap:6}}><button style={S.btn("rgba(34,197,94,0.15)",C.green,"4px 9px")} onClick={()=>setPends(x=>x.map(i=>i.id===p.id?{...i,done:!i.done}:i))}>{p.done?"↩":"✓"}</button><button style={S.btn("rgba(239,68,68,0.12)",C.red,"4px 9px")} onClick={()=>setPends(x=>x.filter(i=>i.id!==p.id))}>✕</button></div></div>
+              {p.manager&&<div style={{fontSize:11,color:C.muted}}>👤 {p.manager}{p.wallet?` · Cart.${p.wallet}`:""}</div>}
+              <div style={{fontSize:12,marginTop:4}}>📝 {p.desc}</div>
+              {p.returnDate&&<div style={{fontSize:11,color:C.orange,marginTop:3}}>📅 {fmtDate(p.returnDate)}</div>}
+            </div>
+          ))}
+        </>}
+      </div>
+
+      <button style={S.fab} onClick={()=>{setForm(emptyForm);setEditId(null);setScreen("register");}}>+</button>
+
+      {/* VISIT MODAL */}
+      {visitModal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:50,display:"flex",flexDirection:"column"}} onClick={e=>{if(e.target===e.currentTarget)setVisitModal(false);}}>
+          <div style={{background:"#0d1630",borderTop:`2px solid ${C.gold}`,borderRadius:"16px 16px 0 0",position:"absolute",bottom:0,left:0,right:0,maxHeight:"90vh",display:"flex",flexDirection:"column"}}>
+            <div style={{padding:"13px 15px 10px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div><div style={{fontSize:13,fontWeight:700,color:C.gold}}>📍 Visitas</div></div>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <select style={{...S.inp,marginBottom:0,width:"auto",fontSize:12,padding:"5px 9px"}} value={visitMonth} onChange={e=>setVisitMonth(e.target.value)}>
+                  {SEM_MONTHS.map(ym=><option key={ym} value={ym}>{fmtYM(ym)}{ym===CUR_YM?" ★":""}</option>)}
+                </select>
+                <button style={S.btn("rgba(255,255,255,0.07)",C.muted,"6px 11px")} onClick={()=>setVisitModal(false)}>✕</button>
+              </div>
+            </div>
+            <div style={{display:"flex",borderBottom:`1px solid ${C.border}`}}>
+              {[["mensal","Mensal"],["semestral","Semestral"]].map(([k,l])=>(
+                <button key={k} style={{flex:1,padding:"9px",textAlign:"center",fontSize:12,fontWeight:700,color:visitView===k?C.gold:C.muted,borderBottom:visitView===k?`2px solid ${C.gold}`:"2px solid transparent",cursor:"pointer",background:"none",border:"none",fontFamily:"inherit"}} onClick={()=>setVisitView(k)}>{l}</button>
+              ))}
+            </div>
+            <div style={{overflowY:"auto",padding:"12px 14px 20px",flex:1}}>
+              {(()=>{
+                const mv=monthVisits[visitMonth]||{};
+                const totalMes=Object.values(mv).reduce((a,b)=>a+b,0);
+                return(
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:C.goldFade,borderRadius:9,padding:"9px 13px",marginBottom:14}}>
+                    {visitView==="mensal"?<><span style={{fontSize:12,color:C.gold}}>Visitas em {fmtYM(visitMonth)}</span><span style={{fontSize:18,fontWeight:900,color:C.gold}}>{totalMes}<span style={{fontSize:11,color:C.muted}}> / {MONTHLY_VISIT_META}</span></span></>
+                    :<><span style={{fontSize:12,color:C.gold}}>Prefixos no semestre</span><span style={{fontSize:18,fontWeight:900,color:C.gold}}>{totalVisitSem}<span style={{fontSize:11,color:C.muted}}> / {SEM_VISIT_META}</span></span></>}
+                  </div>
+                );
+              })()}
+              {GROUPS.map(grp=>(
+                <div key={grp} style={{marginBottom:14}}>
+                  <div style={{fontSize:9,color:C.muted,letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>{grp}</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:7}}>
+                    {AG.filter(a=>a.group===grp).map(ag=>{
+                      const count=(monthVisits[visitMonth]||{})[ag.id]||0;
+                      const semVisited=allVisitedSem.has(ag.id);
+                      const active=visitView==="mensal"?count>0:semVisited;
+                      return(
+                        <div key={ag.id} onClick={()=>visitView==="mensal"&&count===0&&markVisit(ag.id,visitMonth)}
+                          style={{background:active?"rgba(34,197,94,0.12)":"rgba(255,255,255,0.04)",border:`1px solid ${active?"#22c55e55":C.border}`,borderRadius:12,padding:"12px 14px",cursor:visitView==="mensal"&&count===0?"pointer":"default",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <div>
+                            <div style={{fontSize:14,fontWeight:700,color:active?C.green:C.text}}>{ag.prefix}</div>
+                            <div style={{fontSize:12,color:active?C.green:C.muted,marginTop:2}}>{ag.name}</div>
+                            {visitView==="semestral"&&<div style={{fontSize:10,marginTop:3,color:semVisited?C.green:C.orange}}>{semVisited?"✓ Visitada":"○ Não visitada"}</div>}
+                          </div>
+                          {visitView==="mensal"&&(count>0?(
+                            <div style={{display:"flex",alignItems:"center",gap:6}}>
+                              <button onClick={e=>{e.stopPropagation();unmarkVisit(ag.id,visitMonth);}} style={{background:"rgba(239,68,68,0.2)",border:"none",color:C.red,borderRadius:8,padding:"4px 10px",fontSize:16,cursor:"pointer",fontWeight:700}}>−</button>
+                              <span style={{background:C.green,color:"#fff",borderRadius:12,padding:"3px 10px",fontSize:12,fontWeight:700}}>{count}x</span>
+                              <button onClick={e=>{e.stopPropagation();markVisit(ag.id,visitMonth);}} style={{background:"rgba(34,197,94,0.2)",border:"none",color:C.green,borderRadius:8,padding:"4px 10px",fontSize:16,cursor:"pointer",fontWeight:700}}>+</button>
+                            </div>
+                          ):(
+                            <button onClick={e=>{e.stopPropagation();markVisit(ag.id,visitMonth);}} style={{background:C.goldFade,border:`1px solid ${C.gold}44`,color:C.gold,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontWeight:700}}>+ Marcar</button>
+                          ))}
+                          {visitView==="semestral"&&semVisited&&<div style={{color:C.green,fontSize:18}}>✓</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SETTINGS MODAL */}
+      {settingsModal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:60,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>{if(e.target===e.currentTarget)setSettingsModal(false);}}>
+          <div style={{background:"#0d1630",border:`1px solid ${C.gold}55`,borderRadius:16,padding:20,width:"100%",maxWidth:360}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
+              <div style={{fontSize:14,fontWeight:700,color:C.gold}}>⚙️ Configurações</div>
+              <button style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:18}} onClick={()=>setSettingsModal(false)}>✕</button>
+            </div>
+            <label style={S.lbl}>Seu Nome</label>
+            <input style={S.inp} value={editNameVal} onChange={e=>setEditNameVal(e.target.value)}/>
+            <button style={{...S.btn(C.gold,"#001f3f"),width:"100%",padding:"12px",fontSize:14,marginBottom:10}} onClick={()=>{if(editNameVal.trim()){setUserName(editNameVal.trim());sv("fc_name",editNameVal.trim());setSettingsModal(false);}}}>✓ Salvar</button>
+            <button style={{...S.btn("rgba(239,68,68,0.15)",C.red),width:"100%",padding:"10px",fontSize:13}} onClick={()=>{setLoggedIn(false);setSettingsModal(false);}}>Sair / Trocar usuário</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  if(screen==="register"){
+    const isVisita=form.type==="visita";
+    const isNormal=form.type==="normal";
+    const isQual=!isVisita&&!isNormal;
+    const selAg=AG.find(a=>a.id===form.agencyId);
+    return(
+      <div style={S.app}>
+        <div style={S.hdr}><button style={S.btn("rgba(255,255,255,0.07)",C.muted,"6px 11px")} onClick={()=>setScreen("home")}>← Voltar</button><span style={{fontSize:13,fontWeight:700,color:C.gold}}>Registrar Atendimento</span><button style={S.btn(C.gold,"#001f3f","6px 13px")} onClick={saveAtt}>Salvar</button></div>
+        <div style={S.main}>
+          <div style={S.card}>
+            <div style={{display:"flex",gap:9,marginBottom:9}}>
+              <div style={{flex:1}}><label style={S.lbl}>Data</label><input type="date" style={S.inp} value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}/></div>
+              <div style={{flex:1}}><label style={S.lbl}>Horário</label><input type="time" style={S.inp} value={form.time} onChange={e=>setForm(f=>({...f,time:e.target.value}))}/></div>
+            </div>
+            <label style={S.lbl}>Tipo</label>
+            <div style={{display:"flex",gap:7,marginBottom:11}}>{ATT_TYPES.map(t=>(<button key={t.id} style={S.chip(t.color,form.type===t.id)} onClick={()=>setForm(f=>({...f,type:t.id,manager:"",wallet:"",clientDoc:"",cotacao:""}))}>{t.short}</button>))}</div>
+            <label style={S.lbl}>Prefixo / Agência</label>
+            <select style={S.inp} value={form.agencyId} onChange={e=>setForm(f=>({...f,agencyId:e.target.value,wallet:""}))}>
+              <option value="">Selecione...</option>
+              {GROUPS.map(grp=>(<optgroup key={grp} label={grp}>{AG.filter(a=>a.group===grp).map(a=>(<option key={a.id} value={a.id}>{a.prefix} — {a.name}</option>))}</optgroup>))}
+            </select>
+            {isNormal&&<>
+              <label style={S.lbl}>Nome do Funcionário</label><input style={S.inp} placeholder="Nome do funcionário" value={form.manager} onChange={e=>setForm(f=>({...f,manager:e.target.value}))}/>
+              <label style={S.lbl}>Cargo</label>
+              <div style={{display:"flex",gap:7,marginBottom:10}}>{["Gerente","Assistente","GG"].map(c=>(<button key={c} style={S.chip(C.blue,form.cargo===c)} onClick={()=>setForm(f=>({...f,cargo:c}))}>{c}</button>))}</div>
+              <label style={S.lbl}>Carteira</label>
+              {selAg&&selAg.wallets.length>1?(<div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:10}}>{selAg.wallets.map(w=>(<button key={w} style={S.chip(C.purple,form.wallet===String(w))} onClick={()=>setForm(f=>({...f,wallet:String(w)}))}>{w}</button>))}</div>):(<input style={S.inp} placeholder="Número da carteira" value={form.wallet} onChange={e=>setForm(f=>({...f,wallet:e.target.value}))}/>)}
+            </>}
+            {isQual&&<>
+              <label style={S.lbl}>Nome do Funcionário</label><input style={S.inp} placeholder="Nome do funcionário" value={form.manager} onChange={e=>setForm(f=>({...f,manager:e.target.value}))}/>
+              <label style={S.lbl}>Cargo</label>
+              <div style={{display:"flex",gap:7,marginBottom:10}}>{["Gerente","Assistente","GG"].map(c=>(<button key={c} style={S.chip(C.blue,form.cargo===c)} onClick={()=>setForm(f=>({...f,cargo:c}))}>{c}</button>))}</div>
+              <label style={S.lbl}>Carteira</label>
+              {selAg&&selAg.wallets.length>1?(<div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:10}}>{selAg.wallets.map(w=>(<button key={w} style={S.chip(C.blue,form.wallet===String(w))} onClick={()=>setForm(f=>({...f,wallet:String(w)}))}>{w}</button>))}</div>):(<input style={S.inp} placeholder="Número da carteira" value={form.wallet} onChange={e=>setForm(f=>({...f,wallet:e.target.value}))}/>)}
+              <label style={S.lbl}>Identificação</label>
+              <div style={{display:"flex",gap:8,marginBottom:9}}>{["cpf","cnpj","mci"].map(tp=>(<button key={tp} style={{...S.chip(C.blue,form.docType===tp),flex:1,textAlign:"center"}} onClick={()=>setForm(f=>({...f,docType:tp}))}>{tp.toUpperCase()}</button>))}</div>
+              <input style={S.inp} placeholder={form.docType==="cpf"?"000.000.000-00":form.docType==="cnpj"?"00.000.000/0000-00":"Número MCI"} value={form.clientDoc} onChange={e=>setForm(f=>({...f,clientDoc:e.target.value}))}/>
+              <label style={S.lbl}>Valor da Cotação (R$)</label>
+              <input type="number" style={S.inp} placeholder="Ex: 50000" value={form.cotacao} onChange={e=>setForm(f=>({...f,cotacao:e.target.value}))}/>
+            </>}
+            {!isVisita&&<><label style={S.lbl}>Observações</label><textarea style={S.txta} placeholder="Assunto, situação, próximos passos..." value={form.obs} onChange={e=>setForm(f=>({...f,obs:e.target.value}))}/></>}
+            {isVisita&&<><label style={S.lbl}>Observações (opcional)</label><textarea style={S.txta} placeholder="Observações da visita..." value={form.obs} onChange={e=>setForm(f=>({...f,obs:e.target.value}))}/></>}
+            {!isVisita&&<>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:form.hasPend?10:0}}>
+                <input type="checkbox" id="hp" checked={form.hasPend} onChange={e=>setForm(f=>({...f,hasPend:e.target.checked}))} style={{width:16,height:16,cursor:"pointer"}}/>
+                <label htmlFor="hp" style={{fontSize:12,color:C.orange,cursor:"pointer"}}>⏳ Ficou pendente</label>
+              </div>
+              {form.hasPend&&<><label style={S.lbl}>Data de Retorno</label><input type="date" style={S.inp} value={form.pendReturn} onChange={e=>setForm(f=>({...f,pendReturn:e.target.value}))}/></>}
+            </>}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if(screen==="report"){
+    const dates=[...new Set(atts.map(a=>a.date))].sort((a,b)=>b.localeCompare(a));
+    const txt=buildReport(selDate);
+    return(
+      <div style={S.app}>
+        <div style={S.hdr}><button style={S.btn("rgba(255,255,255,0.07)",C.muted,"6px 11px")} onClick={()=>setScreen("home")}>← Voltar</button><span style={{fontSize:13,fontWeight:700,color:C.gold}}>Relatório Diário</span><button style={S.btn(C.gold,"#001f3f","6px 12px")} onClick={()=>navigator.clipboard?.writeText(txt).then(()=>alert("Copiado!"))}>Copiar</button></div>
+        <div style={S.main}>
+          <label style={S.lbl}>Data</label>
+          <select style={S.inp} value={selDate} onChange={e=>setSelDate(e.target.value)}>{[TODAY,...dates.filter(d=>d!==TODAY)].map(d=>(<option key={d} value={d}>{fmtDate(d)}{d===TODAY?" (Hoje)":""}</option>))}</select>
+          <div style={{background:"#fff",color:"#111",borderRadius:11,padding:18,fontFamily:"monospace",fontSize:12.5,lineHeight:1.75,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{txt}</div>
+          <div style={{fontSize:10,color:C.muted,textAlign:"center",marginTop:10}}>Copie e cole no WhatsApp ou sistema</div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
